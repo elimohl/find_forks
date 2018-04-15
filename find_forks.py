@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
+
+
 from argparse import ArgumentParser
 import argparse, getpass
 import github
+import requests
 
 
 class Password(argparse.Action):
@@ -11,23 +14,34 @@ class Password(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
+def is_ahead(url):
+    r = requests.get(url)
+    if 'commits ahead of ' in r.text:
+        return True
+    return False
+
+
 def find_nice_forks(repo_name, username, password):
     g = github.Github(username, password)
     repo = g.get_repo(repo_name)
-    print('Forks\tStars')
     forks = repo.get_forks()
     if isinstance(forks, github.Repository.Repository):
         print("Unusual case")
         print(forks.html_url)
     else:
-        forks_and_stars = [(fork.html_url, fork.stargazers_count) for fork in forks]
+        forks_and_stars = [(fork.html_url, fork.stargazers_count)
+                for fork in forks if is_ahead(fork.html_url)]
+        if not forks_and_stars:
+            print('There are no non-trivial forks')
+            return
         forks_and_stars.sort(key=lambda x: x[1], reverse=True)
+        print('Forks\tStars')
         for fork, star in forks_and_stars:
             print(fork, star, sep='\t')
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description='Process some integers.')
+    parser = ArgumentParser(description='Script to find non-trivial forks')
     parser.add_argument('repo_name',
                         help='parent repostory full name (owner/repo)')
     parser.add_argument('-u', '--username',
