@@ -6,6 +6,7 @@ import argparse, getpass
 import github
 import requests
 from tqdm import tqdm
+import re
 
 
 class Password(argparse.Action):
@@ -17,7 +18,7 @@ class Password(argparse.Action):
 
 def is_ahead(url):
     r = requests.get(url)
-    if 'commits ahead of ' in r.text:
+    if re.findall(r'This branch is \d* commits? ahead', r.text):
         return True
     return False
 
