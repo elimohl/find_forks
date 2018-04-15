@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 import argparse, getpass
 import github
 import requests
+from tqdm import tqdm
 
 
 class Password(argparse.Action):
@@ -30,7 +31,7 @@ def find_nice_forks(repo_name, username, password):
         print(forks.html_url)
     else:
         forks_and_stars = [(fork.html_url, fork.stargazers_count)
-                for fork in forks if is_ahead(fork.html_url)]
+                for fork in tqdm(forks, total=repo.forks_count) if is_ahead(fork.html_url)]
         if not forks_and_stars:
             print('There are no non-trivial forks')
             return

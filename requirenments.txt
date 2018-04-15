@@ -1,2 +1,3 @@
 pygithub
 requests
+tqdm
