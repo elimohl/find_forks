@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
 
+import argparse
 from argparse import ArgumentParser
-import argparse, getpass
+import getpass
+import re
+
+from tqdm import tqdm
 import github
 import requests
-from tqdm import tqdm
-import re
 
 
 class Password(argparse.Action):
@@ -32,7 +34,8 @@ def find_nice_forks(repo_name, username, password):
         print(forks.html_url)
     else:
         forks_and_stars = [(fork.html_url, fork.stargazers_count)
-                for fork in tqdm(forks, total=repo.forks_count) if is_ahead(fork.html_url)]
+                           for fork in tqdm(forks, total=repo.forks_count)
+                           if is_ahead(fork.html_url)]
         if not forks_and_stars:
             print('There are no non-trivial forks')
             return
@@ -43,12 +46,14 @@ def find_nice_forks(repo_name, username, password):
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description='Script to find non-trivial forks')
+    parser = ArgumentParser(description='Script to find non-trivial forks.')
     parser.add_argument('repo_name',
                         help='parent repostory full name (owner/repo)')
     parser.add_argument('-u', '--username',
                         help='authenticated requests get a higher rate limit')
-    parser.add_argument('-p', '--password', action=Password, nargs='?')
+    parser.add_argument('-p', '--password', action=Password, nargs='?',
+                        help="you don't need to enter the password at a command line;"
+                        "just type -p and you will get a prompt.")
 
     args = parser.parse_args()
     find_nice_forks(args.repo_name, args.username, args.password)
