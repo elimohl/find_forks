@@ -6,10 +6,16 @@ import argparse
 from argparse import ArgumentParser
 import getpass
 import re
+from time import time, sleep
+from collections import deque
 
 from tqdm import tqdm
 import github
 import requests
+
+
+AUTHENTICATED_LIMIT = 5000
+UNAUTHENTICATED_LIMIT = 60
 
 
 class Password(argparse.Action):
@@ -27,6 +33,13 @@ def is_ahead(url):
 
 
 def find_nice_forks(repo_name, username, password):
+    if not username or not password:
+        rate_limit = UNAUTHENTICATED_LIMIT
+        print('Warning! Github rate limit is only 60'
+              'requests per hour for unauthenticated requests.')
+    else:
+        rate_limit = AUTHENTICATED_LIMIT
+
     g = github.Github(username, password)
     repo = g.get_repo(repo_name)
     forks = repo.get_forks()
@@ -34,12 +47,31 @@ def find_nice_forks(repo_name, username, password):
         print("Unusual case")
         print(forks.html_url)
     else:
-        forks_and_stars = [(fork.html_url, fork.stargazers_count)
-                           for fork in tqdm(forks, total=repo.forks_count)
-                           if is_ahead(fork.html_url)]
+        forks_and_stars = []
+        request_times = deque()
+
+        for fork in tqdm(forks, total=repo.forks_count):
+            current_time = time()
+            print(current_time)
+            for t in request_times:
+                if current_time - t > 3600:
+                    request_times.popleft()
+                else:
+                    break
+            request_times.append(current_time)
+
+            print(len(request_times))
+            if len(request_times) >= rate_limit:
+                print(len(request_times), 'SLEEP')
+                sleep(3600 - (current_time - request_times[0]))
+
+            if is_ahead(fork.html_url):
+                forks_and_stars.append((fork.html_url, fork.stargazers_count))
+
         if not forks_and_stars:
             print('There are no non-trivial forks')
             return
+
         forks_and_stars.sort(key=lambda x: x[1], reverse=True)
         print('Forks\tStars')
         for fork, star in forks_and_stars:
@@ -48,7 +80,7 @@ def find_nice_forks(repo_name, username, password):
 
 if __name__ == '__main__':
     parser = ArgumentParser(description="Script to find non-trivial forks."
-                            "Note that rate limitis is 5000 requests per hour"
+                            "Note that rate limit is 5000 requests per hour"
                             "for authenticated requests and 60 requests per hour for"
                             "unauthenticated requests."
                             "So if you need to check forks of really popular"
