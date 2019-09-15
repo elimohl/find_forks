@@ -6,9 +6,11 @@ import argparse
 from argparse import ArgumentParser
 import getpass
 import re
+from time import sleep
 
 from tqdm import tqdm
 import github
+from github.GithubException import RateLimitExceededException
 import requests
 
 
@@ -26,17 +28,33 @@ def is_ahead(url):
     return False
 
 
-def find_nice_forks(repo_name, username, password):
-    g = github.Github(username, password)
-    repo = g.get_repo(repo_name)
-    forks = repo.get_forks()
+def find_nice_forks(repo_name, username, password, sleep_interval):
+    success = False
+    while not success:
+        try:
+            g = github.Github(username, password)
+            repo = g.get_repo(repo_name)
+            forks = repo.get_forks()
+            success = True
+        except RateLimitExceededException:
+            print(f'Sleep for {sleep_interval} seconds because of rate limit.')
+            sleep(sleep_interval)
+
     if isinstance(forks, github.Repository.Repository):
         print("Unusual case")
         print(forks.html_url)
     else:
-        forks_and_stars = [(fork.html_url, fork.stargazers_count)
-                           for fork in tqdm(forks, total=repo.forks_count)
-                           if is_ahead(fork.html_url)]
+        forks_and_stars = []
+        for fork in tqdm(forks, total=repo.forks_count):
+            success = False
+            while not success:
+                try:
+                    if is_ahead(fork.html_url):
+                        forks_and_stars.append((fork.html_url, fork.stargazers_count))
+                    success = True
+                except RateLimitExceededException:
+                    print(f'Sleep for {sleep_interval} seconds because of rate limit.')
+                    sleep(sleep_interval)
         if not forks_and_stars:
             print('There are no non-trivial forks')
             return
@@ -63,9 +81,11 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--password', action=Password, nargs='?',
                         help="you don't need to enter the password at a command line;"
                         "just type -p and you will get a prompt.")
+    parser.add_argument('-s', '--sleep-interval', type=float, default=200,
+                        help='seconds to sleep when rate limit exceeded')
 
     args = parser.parse_args()
     username = args.username or os.environ.get('GITHUB_USERNAME', None)
     password = args.password or os.environ.get('GITHUB_PASSWORD', None)
 
-    find_nice_forks(args.repo_name, username, password)
+    find_nice_forks(args.repo_name, username, password, args.sleep_interval)
