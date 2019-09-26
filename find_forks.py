@@ -65,14 +65,14 @@ def find_nice_forks(repo_name, username, password, sleep_interval):
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description="Script to find non-trivial forks."
-                            "Note that rate limitis is 5000 requests per hour"
-                            "for authenticated requests and 60 requests per hour for"
-                            "unauthenticated requests."
-                            "So if you need to check forks of really popular"
-                            "repository it will be better to authenticate."
-                            "For this you can use either arguments or"
-                            "GITHUB_USERNAME and GITHUB_PASSWORD environment variables."
+    parser = ArgumentParser(description="Script to find non-trivial forks. "
+                            "Note that rate limitis is 5000 requests per hour "
+                            "for authenticated requests and 60 requests per hour for "
+                            "unauthenticated requests. "
+                            "So if you need to check forks of really popular "
+                            "repository it will be better to authenticate. "
+                            "For this you can use either arguments or "
+                            "GITHUB_USERNAME and GITHUB_PASSWORD environment variables. "
                             )
     parser.add_argument('repo_name',
                         help='parent repostory full name (owner/repo)')
